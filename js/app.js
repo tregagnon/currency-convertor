@@ -155,7 +155,7 @@
             fromCurr = doc.getElementById('from-currency-select').value,
             toCurr = doc.getElementById('to-currency-select').value,
             fromAmount = doc.getElementById('from-amount').value,
-            submitButton = form.querySelector('input[type="submit"]'),
+            submitButton = form.querySelector('button[type="submit"]'),
             toAmountEl = doc.getElementById('to-amount'),
             conversionRate,
             rates,
