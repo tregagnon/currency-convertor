@@ -3,7 +3,7 @@
 
     var form = doc.getElementById('conversion-form'),
         apiKey = '6a37312591624da8943fffedc353919e',
-        url = 'http://openexchangerates.org/api/latest.json?app_id=' + apiKey,
+        ratesUrl = 'http://openexchangerates.org/api/latest.json?app_id=' + apiKey,
         currenciesURL = 'http://openexchangerates.org/api/currencies.json?app_id=' + apiKey,
         decimalSep = ',';
 
@@ -51,13 +51,26 @@
         return fromAmount * conversionRate;
     };
 
+    // get stored rates
     var getRates = function () {
         var key = 'rates',
             data;
 
         console.log('Get rates from localStorage');
 
-        data = localStorage.getItem(key);
+        data = readData(key);
+
+        return JSON.parse(data);
+    };
+
+    // get stored currencies
+    var getCurrencies = function () {
+        var key = 'currencies',
+            data;
+
+        console.log('Get currencies from localStorage');
+
+        data = readData(key);
 
         return JSON.parse(data);
     };
@@ -102,7 +115,34 @@
         xhr.addEventListener('load', transferComplete, false);
 
         console.log('Start XHR for Rates');
-        xhr.open('GET', url , true);
+        xhr.open('GET', ratesUrl , true);
+        xhr.send();
+    };
+
+    var fetchCurrencies = function(callback) {
+        var xhr = new XMLHttpRequest(),
+            response;
+
+        function transferComplete(evt) {
+            var xhr = evt.target;
+            if (xhr.status === 200 || xhr.status === 304) {
+                response = JSON.parse(xhr.responseText);
+
+                console.log('Currencies retrieved from Web Service');
+
+                if (typeof callback === 'function') {
+                    callback('currencies', xhr.responseText);
+                }
+
+            } else {
+                throw 'AJAX error';
+            }
+        }
+
+        xhr.addEventListener('load', transferComplete, false);
+
+        console.log('Start XHR for Currencies');
+        xhr.open('GET', currenciesURL , true);
         xhr.send();
     };
 
@@ -139,70 +179,89 @@
         submitButton.removeAttribute('disabled');
     };
 
-    // Get up to date list of currencies from openexchanges rates and create currencies dropdown in the form
-    function setupCurrenciesSelect(containers) {
-        var xhr = new XMLHttpRequest(),
-            selectEl,
+    var setupCurrenciesHtml = function (key, data) {
+
+        var currencies,
+            containers = [
+                doc.getElementById('from-currency'),
+                doc.getElementById('to-currency')
+            ],
+            currenciesList,
+            currency,
             optionEl,
             optionTxt,
-            currencies,
-            currency,
-            i,
-            currenciesList;
+            i;
 
-        xhr.open('GET', currenciesURL, false);
-        xhr.send(); // because of "false" above, will block until the request is done and status is available. Not recommended, however it works for simple cases.
-
-        if (xhr.status === 200) {
-            currencies = JSON.parse(xhr.responseText);
-
-            currenciesList = doc.createElement('select');
-
-            for ( currency in currencies ) {
-
-                optionEl = doc.createElement('option');
-                optionTxt = doc.createTextNode(currency + ' - ' + currencies[currency]);
-                optionEl.value = currency;
-                optionEl.appendChild(optionTxt);
-                currenciesList.appendChild(optionEl);
-            }
-
-            var currenciesList2 = currenciesList.cloneNode(true);
-
-            currenciesList.id = containers[0].id + '-select';
-            containers[0].appendChild(currenciesList);
-
-            currenciesList2.id = containers[0].id + '-select';
-            containers[0].appendChild(currenciesList2);
-
-            for (i = 0 ; i < containers.length ; i += 1) {
-                console.log(containers[i]);
-                currenciesList.id = containers[i].id + '-select';
-                containers[i].appendChild(currenciesList);
-            }
+        if (typeof key !== 'undefined' && typeof data !== 'undefined') {
+            storeData(key, data);
         }
-    }
 
-    setupCurrenciesSelect([
-        doc.getElementById('from-currency'),
-        doc.getElementById('to-currency')
-    ]);
+        currencies = getCurrencies();
+        console.log('Currencies', currencies);
+
+        currenciesList = doc.createElement('select');
+
+        for ( currency in currencies ) {
+
+            optionEl = doc.createElement('option');
+            optionTxt = doc.createTextNode(currency + ' - ' + currencies[currency]);
+            optionEl.value = currency;
+            optionEl.appendChild(optionTxt);
+            currenciesList.appendChild(optionEl);
+        }
+
+        var currenciesList2 = currenciesList.cloneNode(true);
+
+        currenciesList.id = containers[0].id + '-select';
+        containers[0].appendChild(currenciesList);
+
+        currenciesList2.id = containers[0].id + '-select';
+        containers[0].appendChild(currenciesList2);
+
+        for (i = 0 ; i < containers.length ; i += 1) {
+            console.log(containers[i]);
+            currenciesList.id = containers[i].id + '-select';
+            containers[i].appendChild(currenciesList);
+        }
+    };
 
     var init = function() {
 
-        console.log('Start App init');
+        console.log('Init App');
 
         // set Rates
         var ratesDate = readData('rates-date'),
+            currenciesDate = readData('currencies-date'),
             now = Date.now(),
-            diffDate,
-            cacheLimit = 86400000;
+            diffDateRates,
+            diffDateCurrencies,
+            cacheLimit = 86400000; // 1 day
 
-        ratesDate = Date.parse(ratesDate);
-        diffDate =  now - ratesDate.value;
+        if (currenciesDate) {
+            currenciesDate = Date.parse(currenciesDate);
+            diffDateCurrencies =  now - currenciesDate.value;
 
-        if (diffDate > cacheLimit) {
-            console.log('Cached rates too old, retrieving fresh rates');
+            if (diffDateCurrencies > cacheLimit) {
+                console.log('Cached currencies too old, retrieving fresh currencies from Web service');
+                fetchCurrencies(setupCurrenciesHtml);
+            } else {
+                setupCurrenciesHtml();
+            }
+        } else {
+            console.log('Currencies never cached, retrieving currencies from Web service');
+            fetchCurrencies(setupCurrenciesHtml);
+        }
+
+        if (ratesDate) {
+            ratesDate = Date.parse(ratesDate);
+            diffDateRates =  now - ratesDate.value;
+
+            if (diffDateRates > cacheLimit) {
+                console.log('Cached rates too old, retrieving fresh rates from Web service');
+                fetchRates(storeData);
+            }
+        } else {
+            console.log('Rates never cached, retrieving rates from Web service');
             fetchRates(storeData);
         }
     };
