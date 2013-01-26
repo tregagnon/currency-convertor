@@ -5,7 +5,10 @@
         apiKey = '6a37312591624da8943fffedc353919e',
         ratesUrl = 'http://openexchangerates.org/api/latest.json?app_id=' + apiKey,
         currenciesURL = 'http://openexchangerates.org/api/currencies.json?app_id=' + apiKey,
-        decimalSep = ',';
+        decimalSep = ',',
+        base,
+        appManifestURL,
+        installButton = doc.getElementById('install-app');
 
 
     // Returns the exchange rate to `target` currency from `base` currency
@@ -224,6 +227,26 @@
         }
     };
 
+    var appInstall = function () {
+        var request;
+
+        base = location.href.split('#')[0];
+        base = base.replace('index.html','');
+        appManifestURL = base + '/manifest.webapp';
+
+        request = window.navigator.mozApps.install(appManifestURL);
+
+        request.onsuccess = function () {
+          // Save the App object that is returned
+          var appRecord = this.result;
+          alert('Installation successful!');
+        };
+        request.onerror = function () {
+          // Display the error information from the DOMError object
+          alert('Install failed, error: ' + this.error.name);
+        };
+    };
+
     var init = function() {
 
         console.log('Init App');
@@ -263,10 +286,12 @@
             console.log('Rates never cached, retrieving rates from Web service');
             fetchRates(storeData);
         }
+
+        installButton.addEventListener('click', appInstall, false);
+
+        form.addEventListener('submit', processForm, false);
     };
 
     doc.addEventListener('DOMContentLoaded', init, false);
-
-    form.addEventListener('submit', processForm, false);
 
 })(document);
