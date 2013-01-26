@@ -197,7 +197,6 @@
         }
 
         currencies = getCurrencies();
-        console.log('Currencies', currencies);
 
         currenciesList = doc.createElement('select');
 

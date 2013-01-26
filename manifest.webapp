@@ -1,0 +1,13 @@
+{
+  "name": "Currency Convertor",
+  "description": "Convert any currency!",
+  "launch_path": "/index.html",
+  "icons": {
+    "128": "/img/icon-128.png"
+  },
+  "developer": {
+    "name": "Thierry Régagnon",
+    "url": "http://regagnon.org"
+  },
+  "default_locale": "en"
+}
