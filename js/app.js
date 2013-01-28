@@ -1,18 +1,14 @@
 (function(doc) {
     'use strict';
 
-    var form = doc.getElementById('conversion-form'),
-        apiKey = '6a37312591624da8943fffedc353919e',
+    var apiKey = '6a37312591624da8943fffedc353919e',
         ratesUrl = 'http://openexchangerates.org/api/latest.json?app_id=' + apiKey,
         currenciesURL = 'http://openexchangerates.org/api/currencies.json?app_id=' + apiKey,
-        decimalSep = ',',
-        base,
-        appManifestURL,
-        installButton = doc.getElementById('install-app');
+        decimalSep = ',';
 
 
     // Returns the exchange rate to `target` currency from `base` currency
-    // Inspired from money.js
+    // Inspired from money.js (http://josscrowcroft.github.com/money.js/)
     var getConversionRate = function (rates, from, to, base) {
 
         // Make sure the base rate is in the rates object:
@@ -86,7 +82,7 @@
     };
     // Store Data for later retrieval (simple function for now, should be improved for no localStorage support)
     var storeData = function(key, data) {
-        var date = Date();
+        var date = Date.now();
 
         localStorage.setItem(key, data);
         localStorage.setItem(key + '-date', date.toString());
@@ -228,22 +224,23 @@
     };
 
     var appInstall = function () {
-        var request;
+        var installRequest,
+            baseURL,
+            appManifestURL;
 
-        base = location.href.split('#')[0];
-        base = base.replace('index.html','');
-        appManifestURL = base + '/manifest.webapp';
+        baseURL = location.href.split('#')[0];
+        baseURL = base.replace('index.html','');
+        appManifestURL = baseURL + '/manifest.webapp';
 
-        request = window.navigator.mozApps.install(appManifestURL);
+        installRequest = navigator.mozApps.install(appManifestURL);
 
-        request.onsuccess = function () {
-          // Save the App object that is returned
-          var appRecord = this.result;
-          alert('Installation successful!');
+        installRequest.onsuccess = function () {
+            // Save the App object that is returned
+            alert('Installation successful!');
         };
-        request.onerror = function () {
-          // Display the error information from the DOMError object
-          alert('Install failed, error: ' + this.error.name);
+        installRequest.onerror = function () {
+            // Display the error information from the DOMError object
+            alert('Install failed, error: ' + this.error.name);
         };
     };
 
@@ -251,8 +248,9 @@
 
         console.log('Init App');
 
-        // set Rates
-        var ratesDate = readData('rates-date'),
+        var form = doc.getElementById('conversion-form'),
+            installButton = doc.getElementById('install-app'),
+            ratesDate = readData('rates-date'),
             currenciesDate = readData('currencies-date'),
             now = Date.now(),
             diffDateRates,
